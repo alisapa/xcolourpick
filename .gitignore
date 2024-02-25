@@ -1,0 +1,5 @@
+# Ignore compiled binaries
+xcolourpick
+xcolourpick-dbg
+# Ignore Vim swp files
+*.swp

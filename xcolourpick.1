@@ -1,0 +1,70 @@
+.TH xcolourpick 1 "25 February 2024"
+
+.SH NAME
+
+xcolourpick \- prints the colour of any pixel on the screen
+
+.SH SYNOPSIS
+
+.SY xcolourpick
+.RB [ \-\-decimal ]
+.RB [ \-\-multiple ]
+.RB [ \-\-help ]
+.YS
+.SY xcolourpick
+.RB [ \-d ]
+.RB [ \-m ]
+.RB [ \-h ]
+.YS
+
+.SH DESCRIPTION
+
+xcolourpick captures the mouse pointer. When mouse button 1 is pressed, it
+prints out the colour of the pixel at the cursor position. Unless the
+.B \-\-multiple
+option has been set, it exits after that.
+
+When mouse button 3 is pressed, it opens the magnifier, which makes the 17x17
+area around the cursor 4 times larger. To move the magnifier, press mouse
+button 3 in a different location.
+
+When any other mouse button is pressed, it exits without printing anything.
+
+Usually, mouse button 1 is the left mouse button and mouse button 3 is the
+right mouse button.
+
+.SH OPTIONS
+
+Each short-form option is simply an abbreviation for the long-form option that
+begins with the same letter, and therefore not described here.
+
+.TP 
+.B --decimal
+Print the colour as decimal tuple, rather than as six hexadecimal characters.
+For example, an orange colour might be printed without this option as
+.IR ff8000 ,
+and with this option as
+.IR "255 128 0" .
+
+.TP
+.B --multiple
+Don't exit after mouse button 1 is pressed. Allows for picking more than one
+colour.
+
+.TP
+.B --help
+Print help message and exit.
+
+.SH EXAMPLES
+
+.TP
+.B xcolourpick
+
+Standard operation, no extra options.
+
+.TP
+.B xcolourpick | xmessage -file -
+
+Pipes the output into
+.MR xmessage 1
+rather than printing it on the terminal.
