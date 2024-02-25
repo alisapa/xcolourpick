@@ -228,7 +228,16 @@ int main(int argc, char **argv) {
 	GetSizes(y, screen_h, &off_y, &height);
 	V(printf("x, y, w, h: %d, %d, %d, %d\n",
             x - acHalf + off_x, y - acHalf + off_y, width, height));
+
+        /* This is necessary so that if the button was pressed on the
+         * magnification window, we get whatever is under that window and
+         * not the window itself.
+         * TODO: This appears not to fix the problem entirely, just makes
+         *       it happen less often.
+         */
 	XUnmapWindow(d, wmag);
+        XSync(d, 0);
+
         XImage *img = XGetImage(d, RootWindowOfScreen(s),
             x - acHalf + off_x, y - acHalf + off_y, width, height,
 	    AllPlanes, ZPixmap);
