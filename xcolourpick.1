@@ -8,11 +8,15 @@ xcolourpick \- prints the colour of any pixel on the screen
 
 .SY xcolourpick
 .RB [ \-\-decimal ]
+.RB [ \-\-factor
+.IR fac ]
 .RB [ \-\-multiple ]
 .RB [ \-\-help ]
 .YS
 .SY xcolourpick
 .RB [ \-d ]
+.RB [ \-f
+.IR fac ]
 .RB [ \-m ]
 .RB [ \-h ]
 .YS
@@ -24,9 +28,9 @@ prints out the colour of the pixel at the cursor position. Unless the
 .B \-\-multiple
 option has been set, it exits after that.
 
-When mouse button 3 is pressed, it opens the magnifier, which makes the 17x17
-area around the cursor 4 times larger. To move the magnifier, press mouse
-button 3 in a different location.
+When mouse button 3 is pressed, it opens the magnifier, which makes the area
+around the cursor larger. To move the magnifier, press mouse button 3 in a
+different location.
 
 When any other mouse button is pressed, it exits without printing anything.
 
@@ -39,7 +43,7 @@ Each short-form option is simply an abbreviation for the long-form option that
 begins with the same letter, and therefore not described here.
 
 .TP 
-.B --decimal
+.B \-\-decimal
 Print the colour as decimal tuple, rather than as six hexadecimal characters.
 For example, an orange colour might be printed without this option as
 .IR ff8000 ,
@@ -47,12 +51,16 @@ and with this option as
 .IR "255 128 0" .
 
 .TP
-.B --multiple
+.BI \-\-factor \~fac
+Sets the magnification factor. Default is 4.
+
+.TP
+.B \-\-multiple
 Don't exit after mouse button 1 is pressed. Allows for picking more than one
 colour.
 
 .TP
-.B --help
+.B \-\-help
 Print help message and exit.
 
 .SH EXAMPLES

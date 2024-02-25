@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -9,7 +10,7 @@
  */
 #define V(a) 
 
-/* Constants */
+/* Scaling parameters */
 /* Having an odd number of pixels is necessary: The mouse coordinates should be
  * the center of the area that gets magnified. But if there's an even number of
  * pixels, the mouse coordinates cannot be exactly in the center, since the
@@ -17,17 +18,19 @@
  * and left edges or the pixels at the bottom and right edges not getting
  * magnified.
  */
-#define acPx   17
-#define acHalf  8
-#define scPx   68
-#define scHalf 34
+const int acPx   = 17;
+const int acHalf =  8;
+int mag = 4;
+int scPx, scHalf;
+char *scaled_data;
 
 const char *help_msg =
 "Usage: xcolourpick <options>\n"
 "--decimal\tOutput colour as decimal tuple instead of hexadecimal\n"
+"--factor <fac>\tSet the magnification factor; default is 4\n"
 "--multiple\tDon't exit after first colour pick\n"
 "--help\t\tPrint this help message and exit\n"
-"Short-form options -d, -m, -h are also possible.\n"
+"Short-form options -d, -f, -m, -h are also possible.\n"
 "\n"
 "Mouse bindings:\n"
 "Button 1\tPrint colour of pixel at cursor\n"
@@ -55,36 +58,35 @@ void GetColour(Display *d, Screen *s, int x, int y) {
   XDestroyImage(img);
 }
 
-char scaled_data[scPx * scPx * 4] = {0};
 char test[] = {0x00, 0x00, 0xff, 0xff};
 void DrawMagnified(Display *d, Screen *s, Window w, XImage *img,
     int off_x, int off_y, int width, int height) {
   int bpx = (img->bits_per_pixel + 7) / 8;
-  int sc_bytes_per_line = 4 * scPx;
+  int sc_bytes_per_line = bpx * scPx;
   if (width == acPx && height == acPx) {
     /* We got full image, no need to consider offsets and width/height */
     for (int y = 0; y < acPx; y++) {
       int start = y * img->bytes_per_line;
-      int startSc = 4 * y * sc_bytes_per_line;
+      int startSc = mag * y * sc_bytes_per_line;
       for (int x = 0; x < acPx; x++)
-        for (int dup = 0; dup < 4; dup++)
-          memcpy(&scaled_data[startSc + 4*bpx*x + dup*bpx],
+        for (int dup = 0; dup < mag; dup++)
+          memcpy(&scaled_data[startSc + mag*bpx*x + dup*bpx],
               &img->data[start + bpx*x], bpx);
-      for (int dup = 1; dup < 4; dup++)
+      for (int dup = 1; dup < mag; dup++)
         memcpy(&scaled_data[startSc + dup*sc_bytes_per_line],
             &scaled_data[startSc], sc_bytes_per_line);
     }
   } else {
     V(for (int i = 0; i < scPx * scPx; i++)
-        memcpy(&scaled_data[4*i], test, 4));
+        memcpy(&scaled_data[bpx*i], test, bpx));
     for (int y = 0; y < height; y++) {
       int start = y * img->bytes_per_line;
-      int startSc = 4 * (off_y + y) * sc_bytes_per_line;
+      int startSc = mag * (off_y + y) * sc_bytes_per_line;
       for (int x = 0; x < width; x++)
-        for (int dup = 0; dup < 4; dup++)
-          memcpy(&scaled_data[startSc + 4*bpx*(off_x + x) + dup*bpx],
+        for (int dup = 0; dup < mag; dup++)
+          memcpy(&scaled_data[startSc + mag*bpx*(off_x + x) + dup*bpx],
               &img->data[start + bpx*x], bpx);
-      for (int dup = 1; dup < 4; dup++)
+      for (int dup = 1; dup < mag; dup++)
         memcpy(&scaled_data[startSc + dup*sc_bytes_per_line],
             &scaled_data[startSc], sc_bytes_per_line);
     }
@@ -118,14 +120,21 @@ int main(int argc, char **argv) {
       if (l > 2 && arg[1] == '-') {
         /* Long-form options */
 	if (strcmp("decimal", arg+2) == 0)       decimal  = 1;
-	else if (strcmp("multiple", arg+2) == 0) multiple = 1;
+        else if (strcmp("multiple", arg+2) == 0) multiple = 1;
 	else if (strcmp("help", arg+2) == 0)     help     = 1;
-	else fprintf(stderr, "Unknown argument: %s\n", arg);
+        else if (strcmp("factor", arg+2) == 0) {
+          fOption:
+          if (argc > i+1) {
+            mag = atoi(argv[i+1]);
+            i++;
+          } else fprintf(stderr, "Missing argument.\n");
+        } else fprintf(stderr, "Unknown argument: %s\n", arg);
       } else {
         /* Short-form options */
 	for (char *p = arg+1; *p; p++) {
 	  switch (*p) {
 	  case 'd': decimal  = 1; break;
+          case 'f': goto fOption;
 	  case 'm': multiple = 1; break;
 	  case 'h': help     = 1; break;
 	  default: fprintf(stderr, "Unknown argument: -%c\n", *p);
@@ -139,6 +148,29 @@ int main(int argc, char **argv) {
   if (help) {
     puts(help_msg);
     return 0;
+  }
+
+  /* Check if factor is within limits.
+   * Why 1361 specifically? It is the largest number such that size of the
+   * scaled_data array (calculated as: 17 * 17 * 4 * mag * mag) will still fit
+   * into a 32-bit int.
+   * TODO: If int is 16 bit, that already overflows at mag > 5. Should we do
+   *       anything to fix that?
+   */
+  if (mag < 1 || mag > 1361) {
+    fprintf(stderr, "Factor %d too %s.\n", mag, mag < 1 ? "small" : "large");
+    return 1;
+  }
+  scPx = mag * acPx;
+  scHalf = scPx / 2;
+  /* NOTE: This assumes no more than 4 bytes per pixel.
+   * I do not know of any display with more than 32-bit colours,
+   * so that should be OK.
+   */
+  scaled_data = calloc(scPx*scPx, 4);
+  if (!scaled_data) {
+    fprintf(stderr, "Failed to allocate memory for scaled_data.\n");
+    return 1;
   }
 
   Display *d = XOpenDisplay((char*) NULL);
@@ -217,6 +249,7 @@ int main(int argc, char **argv) {
   }
 
 done:
+  free(scaled_data);
   XFreeCursor(d, c);
   XDestroyWindow(d, wmag);
   XDestroyWindow(d, w);
